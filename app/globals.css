@@ -1,0 +1,96 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: var(--font-geist-sans), 'Geist Fallback';
+  --font-mono: var(--font-geist-mono), 'Geist Mono Fallback';
+
+  /* Aurora Midnight color tokens */
+  --color-background:        var(--background);
+  --color-surface:           var(--surface);
+  --color-surface-raised:    var(--surface-raised);
+  --color-border:            var(--border);
+  --color-foreground:        var(--foreground);
+  --color-muted-foreground:  var(--muted-foreground);
+  --color-teal:              var(--teal);
+  --color-teal-dim:          var(--teal-dim);
+  --color-teal-glow:         var(--teal-glow);
+  --color-danger:            var(--danger);
+  --color-input:             var(--input);
+  --color-ring:              var(--ring);
+
+  /* shadcn compat */
+  --color-card:                     var(--surface);
+  --color-card-foreground:          var(--foreground);
+  --color-popover:                  var(--surface-raised);
+  --color-popover-foreground:       var(--foreground);
+  --color-primary:                  var(--teal);
+  --color-primary-foreground:       oklch(0.1 0.01 220);
+  --color-secondary:                var(--surface-raised);
+  --color-secondary-foreground:     var(--foreground);
+  --color-muted:                    var(--surface-raised);
+  --color-accent:                   var(--teal-dim);
+  --color-accent-foreground:        var(--teal);
+  --color-destructive:              var(--danger);
+  --color-sidebar:                  var(--surface);
+  --color-sidebar-foreground:       var(--foreground);
+  --color-sidebar-border:           var(--border);
+  --color-sidebar-ring:             var(--ring);
+  --color-sidebar-primary:          var(--teal);
+  --color-sidebar-primary-foreground: oklch(0.1 0.01 220);
+  --color-sidebar-accent:           var(--teal-dim);
+  --color-sidebar-accent-foreground: var(--teal);
+
+  --radius-sm:  calc(var(--radius) * 0.6);
+  --radius-md:  calc(var(--radius) * 0.8);
+  --radius-lg:  var(--radius);
+  --radius-xl:  calc(var(--radius) * 1.4);
+}
+
+:root {
+  /* Aurora Midnight — forced dark theme */
+  --background:       oklch(0.12 0.015 240);
+  --surface:          oklch(0.17 0.018 240);
+  --surface-raised:   oklch(0.22 0.018 240);
+  --border:           oklch(1 0 0 / 8%);
+  --foreground:       oklch(0.93 0.01 220);
+  --muted-foreground: oklch(0.62 0.02 230);
+  --teal:             oklch(0.78 0.17 185);
+  --teal-dim:         oklch(0.78 0.17 185 / 12%);
+  --teal-glow:        oklch(0.78 0.17 185 / 30%);
+  --danger:           oklch(0.65 0.22 25);
+  --input:            oklch(1 0 0 / 8%);
+  --ring:             oklch(0.78 0.17 185 / 50%);
+  --radius:           0.5rem;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+  html {
+    @apply bg-background;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: oklch(1 0 0 / 15%); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: oklch(0.78 0.17 185 / 40%); }
+
+/* Teal glow utility */
+.teal-glow {
+  box-shadow: 0 0 20px var(--teal-glow), 0 0 40px oklch(0.78 0.17 185 / 10%);
+}
+
+/* Animated border for sync code */
+@keyframes border-spin {
+  to { --border-angle: 360deg; }
+}
