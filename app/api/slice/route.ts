@@ -1,4 +1,4 @@
-import { Jimp } from 'jimp'
+import Jimp from 'jimp'
 import { NextRequest, NextResponse } from 'next/server'
 
 const ROBLOX_ASSETS_URL = 'https://apis.roblox.com/assets/v1/assets'
@@ -82,9 +82,10 @@ async function sliceImage(
   rows: number,
   columns: number,
 ): Promise<Buffer[]> {
-  const source = await Jimp.fromBuffer(imageBuffer)
-  const totalWidth = source.width
-  const totalHeight = source.height
+  // Use Jimp.read to safely read the image buffer
+  const source = await Jimp.read(imageBuffer)
+  const totalWidth = source.bitmap.width
+  const totalHeight = source.bitmap.height
 
   const frameWidth = Math.floor(totalWidth / columns)
   const frameHeight = Math.floor(totalHeight / rows)
@@ -103,10 +104,10 @@ async function sliceImage(
       const x = col * frameWidth
       const y = row * frameHeight
 
-      // Clone so the source is never mutated between iterations
-      const frame = source.clone().crop({ x, y, w: frameWidth, h: frameHeight })
-      const pngBuffer = await frame.getBuffer('image/png')
-      frames.push(Buffer.from(pngBuffer))
+      // Clone, crop with sequential numeric arguments, and use getBufferAsync for Promise resolution
+      const frame = source.clone().crop(x, y, frameWidth, frameHeight)
+      const pngBuffer = await frame.getBufferAsync(Jimp.MIME_PNG)
+      frames.push(pngBuffer)
     }
   }
 
@@ -130,8 +131,6 @@ async function uploadFrameToRoblox(
 
   const formData = new FormData()
 
-  // Roblox Open Cloud requires the metadata as a plain JSON string
-  // in a field named exactly "request".
   const requestMetadata = {
     assetType: 'Decal',
     displayName: 'MoFX_Frame',
@@ -142,7 +141,6 @@ async function uploadFrameToRoblox(
   }
   formData.append('request', JSON.stringify(requestMetadata))
 
-  // The binary file must be in a field named exactly "fileContent".
   formData.append(
     'fileContent',
     new Blob([buffer], { type: 'image/png' }),
@@ -164,10 +162,6 @@ async function uploadFrameToRoblox(
 
   const json = await res.json()
 
-  // Roblox returns an operation path like "operations/xxxx".
-  // The resolved assetId lives at json.response.assetId once the operation
-  // completes. We return whichever identifier is available so the plugin
-  // can display or poll it.
   const assetId: string =
     json?.response?.assetId ??
     json?.assetId ??
@@ -175,7 +169,6 @@ async function uploadFrameToRoblox(
     json?.operationId ??
     String(json)
 
-  // Prefix with rbxassetid:// if it looks like a bare numeric ID
   if (/^\d+$/.test(assetId)) {
     return `rbxassetid://${assetId}`
   }
@@ -189,7 +182,6 @@ async function uploadFrameToRoblox(
 
 export async function POST(req: NextRequest) {
   try {
-    // Parse and validate JSON body
     let body: unknown
     try {
       body = await req.json()
@@ -213,13 +205,9 @@ export async function POST(req: NextRequest) {
 
     const { assetId, rows, columns } = body
 
-    // Step 1 — Download
     const imageBuffer = await downloadSpritesheet(assetId)
-
-    // Step 2 — Slice
     const frameBuffers = await sliceImage(imageBuffer, rows, columns)
 
-    // Step 3 — Upload frames to Roblox sequentially to respect rate limits
     const frames: string[] = []
     for (let i = 0; i < frameBuffers.length; i++) {
       const id = await uploadFrameToRoblox(frameBuffers[i], i)
