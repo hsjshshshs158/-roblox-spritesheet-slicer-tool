@@ -2,7 +2,7 @@ import { Jimp } from 'jimp'
 import { NextRequest, NextResponse } from 'next/server'
 
 const ROBLOX_ASSETS_URL = 'https://apis.roblox.com/assets/v1/assets'
-const ROBLOX_CDN_URL = 'https://assetdelivery.roblox.com/v1/asset/?id='
+const ROBLOX_SECURE_CDN_URL = 'https://apis.roblox.com/asset-delivery-api/v1/assetId/'
 
 // ---------------------------------------------------------------------------
 // Input validation
@@ -28,17 +28,44 @@ function validateBody(body: unknown): body is SliceBody {
 }
 
 // ---------------------------------------------------------------------------
-// Step 1 — Download spritesheet from Roblox CDN
+// Step 1 — Download spritesheet from Roblox CDN (Using Open Cloud API Key)
 // ---------------------------------------------------------------------------
 
 async function downloadSpritesheet(assetId: string): Promise<Buffer> {
-  const res = await fetch(`${ROBLOX_CDN_URL}${encodeURIComponent(assetId)}`, {
+  const apiKey = process.env.ROBLOX_API_KEY
+  if (!apiKey) {
+    throw new Error('Missing ROBLOX_API_KEY environment variable on Vercel')
+  }
+
+  // 1. Get the authenticated temporary CDN download link from Roblox Open Cloud
+  const authResponse = await fetch(`${ROBLOX_SECURE_CDN_URL}${encodeURIComponent(assetId)}`, {
+    headers: { 
+      'User-Agent': 'MoFX-Slicer/1.0',
+      'x-api-key': apiKey
+    },
+  })
+
+  if (!authResponse.ok) {
+    throw new Error(
+      `Failed to get secure asset location for ${assetId}: ${authResponse.status} ${authResponse.statusText}`,
+    )
+  }
+
+  const authData = await authResponse.json()
+  const cdnUrl = authData?.location
+
+  if (!cdnUrl) {
+    throw new Error(`No secure download location link found in Roblox response for ${assetId}`)
+  }
+
+  // 2. Fetch the actual raw image binary from the secure link
+  const res = await fetch(cdnUrl, {
     headers: { 'User-Agent': 'MoFX-Slicer/1.0' },
   })
 
   if (!res.ok) {
     throw new Error(
-      `Failed to download asset ${assetId}: ${res.status} ${res.statusText}`,
+      `Failed to download asset data from secure location for ${assetId}: ${res.status} ${res.statusText}`,
     )
   }
 
